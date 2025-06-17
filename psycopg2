@@ -1,0 +1,43 @@
+import psycopg2
+from psycopg2 import OperationalError
+
+# 1. マスターCSVファイルを読み込む
+df = pd.read_csv('segment_master.csv')
+
+# 2. データベースに接続
+conn = = psycopg2.connect(
+            dbname="adobepub_dev",
+            user="jun",
+            password="Pub1234Adobe",
+            host="157.230.251.229",  # ホストのIPアドレス
+            port="5432"              # PostgreSQLのデフォルトポート
+        )
+cur = conn.cursor()
+
+# 3. 1行ずつUPSERT処理を実行
+for index, row in df.iterrows():
+    # まずUPDATEを試みる
+    cur.execute(
+        """
+        UPDATE master."Segment"
+        SET segment_name = %s
+        WHERE segment_id = %s;
+        """,
+        (row['segment_name'], row['segment_id'])
+    )
+    # もしUPDATE対象が0件だったら（＝まだ存在しないIDなら）、INSERTする
+    if cur.rowcount == 0:
+        cur.execute(
+            """
+            INSERT INTO master."Segment" (segment_id, segment_name)
+            VALUES (%s, %s);
+            """,
+            (row['segment_id'], row['segment_name'])
+        )
+
+# 4. 変更を確定して接続を閉じる
+conn.commit()
+cur.close()
+conn.close()
+
+print("Segmentテーブルの同期が完了しました。")
