@@ -42,4 +42,3 @@ conn.close()
 
 print("Segmentテーブルの同期が完了しました。")
 
-test
